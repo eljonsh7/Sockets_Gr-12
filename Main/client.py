@@ -1,112 +1,102 @@
-import socket
-import threading
-import tkinter as tk
+from tkinter import *
 from tkinter import filedialog
-sock = None
+from socket import *
+import os
 
-def receive(sock, signal):
-    while signal:
-        try:
-            data = sock.recv(1024)
-            print(str(data.decode("utf-8")))
-        except:
-            print("You have been disconnected from the server")
-            signal = False
-            break
+clientSocket = socket(AF_INET, SOCK_DGRAM)
+serverName = "127.0.0.1"
+serverPort = 4444
+BUFFER_SIZE = 2048
 
-def send_file(sock, filename):
-    try:
-        with open(filename, "rb") as file:
-            file_data = file.read(1024)
-            while file_data:
-                sock.send(file_data)
-                file_data = file.read(1024)
-            print(f"File '{filename}' sent successfully")
-    except Exception as e:
-        print(f"Failed to send file '{filename}': {e}")
-
-def choose_file():
-    file_path = filedialog.askopenfilename()
-    entry_file.delete(0, tk.END)
-    entry_file.insert(tk.END, file_path)
-
-def connect_to_server():
-    global sock
-    global receiveThread
-
-    host = entry_host.get()
-    port = int(entry_port.get())
-
-    # Attempt connection to the server
-    try:
-        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-        sock.connect((host, port))
-    except Exception as e:
-        print(f"Could not make a connection to the server: {e}")
-        return
-
-    receiveThread = threading.Thread(target=receive, args=(sock, True))
-    receiveThread.start()
 
 def send_message():
-    global sock
-    message = entry_message.get()
-    sock.sendall(str.encode(message))
+    message = message_entry.get()
+    clientSocket.sendto(message.encode(), (serverName, serverPort))
+    message_entry.delete(0, END)
 
-def send_file_to_server():
-    global sock
-    filename = entry_file.get()
-    send_file(sock, filename)
+def add_file():
+    file_path = filedialog.askopenfilename()  # Open file dialog to select a file
+    if file_path:
+        file_name = os.path.basename(file_path)
+        clientSocket.sendto(f"ADD_FILE {file_name}".encode(), (serverName, serverPort))
+        with open(file_path, "rb") as file:
+            file_data = file.read()
+            clientSocket.sendto(file_data, (serverName, serverPort))
 
-# Create GUI
-root = tk.Tk()
-root.title("Client Configuration")
 
-root.geometry("500x400")  # Set initial window size
+def delete_file():
+    selected_file = file_listbox.get(file_listbox.curselection())
+    clientSocket.sendto(f"DELETE_FILE {selected_file}".encode(), (serverName, serverPort))
 
-frame = tk.Frame(root)
-frame.pack(pady=20)
+def download_file():
+    selected_file = file_listbox.get(file_listbox.curselection())
+    # Implement file download functionality here
 
-label_host = tk.Label(frame, text="Enter Host:")
-label_host.pack()
+def receive_messages():
+    while True:
+        try:
+            message, _ = clientSocket.recvfrom(BUFFER_SIZE)
+            if not message:
+                break
+            decoded_message = message.decode()
+            if ":" in decoded_message:
+                received_messages.insert(END, decoded_message)
+            elif decoded_message.startswith("NEW_FILE"):
+                file_name = decoded_message.split()[1]
+                file_listbox.insert(END, file_name)
+        except OSError as e:
+            print(f"Error receiving message: {e}")
+            break
 
-entry_host = tk.Entry(frame)
-entry_host.pack()
 
-label_port = tk.Label(frame, text="Enter Port:")
-label_port.pack()
+def update_file_list():
+    clientSocket.sendto("GET_FILES".encode(), (serverName, serverPort))
+    # Receive file list from server and update file_listbox
+    # Replace this comment with logic to update the file_listbox
 
-entry_port = tk.Entry(frame)
-entry_port.pack()
+# GUI setup
+root = Tk()
+root.title("Client")
 
-connect_button = tk.Button(frame, text="Connect", command=connect_to_server)
-connect_button.pack()
+# Part 1: Sending Messages
+message_frame = Frame(root)
+message_label = Label(message_frame, text="Message:")
+message_label.pack(side=LEFT)
+message_entry = Entry(message_frame, width=40)
+message_entry.pack(side=LEFT)
+send_button = Button(message_frame, text="Send", command=send_message)
+send_button.pack(side=LEFT)
+message_frame.pack(pady=10)
 
-message_frame = tk.Frame(root)
-message_frame.pack(pady=20)
+# Part 2: Displaying Received Messages
+messages_frame = Frame(root)
+messages_label = Label(messages_frame, text="Received Messages:")
+messages_label.pack()
+received_messages = Listbox(messages_frame, width=60, height=15)
+received_messages.pack()
+messages_frame.pack(pady=10)
 
-label_message = tk.Label(message_frame, text="Message:")
-label_message.pack()
+# Part 3: Managing Files
+files_frame = Frame(root)
+files_label = Label(files_frame, text="Files:")
+files_label.pack()
+file_listbox = Listbox(files_frame, width=40, height=10)
+file_listbox.pack()
+add_button = Button(files_frame, text="Add", command=add_file)
+add_button.pack(side=LEFT)
+delete_button = Button(files_frame, text="Delete", command=delete_file)
+delete_button.pack(side=LEFT)
+download_button = Button(files_frame, text="Download", command=download_file)
+download_button.pack(side=LEFT)
+files_frame.pack(pady=10)
 
-entry_message = tk.Entry(message_frame)
-entry_message.pack()
+import threading
+receive_thread = threading.Thread(target=receive_messages)
+receive_thread.daemon = True
+receive_thread.start()
+print(receive_thread)
 
-send_message_button = tk.Button(message_frame, text="Send Message", command=send_message)
-send_message_button.pack()
-
-file_frame = tk.Frame(root)
-file_frame.pack(pady=20)
-
-label_file = tk.Label(file_frame, text="Select File:")
-label_file.pack()
-
-entry_file = tk.Entry(file_frame)
-entry_file.pack(side=tk.LEFT, padx=10)
-
-choose_file_button = tk.Button(file_frame, text="Choose File", command=choose_file)
-choose_file_button.pack(side=tk.LEFT, padx=10)
-
-send_file_button = tk.Button(file_frame, text="Send File", command=send_file_to_server)
-send_file_button.pack(side=tk.LEFT, padx=10)
-
+# Start the GUI
 root.mainloop()
+
+clientSocket.close()
