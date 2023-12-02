@@ -1,52 +1,186 @@
 from socket import *
 import os
 
+directory = 'Files/'
+
+def add_file(filename):
+    try:
+        with open(f"{directory}{filename}", 'w') as new_file:
+            new_file.write('')
+        return f"File '{filename}' created successfully."
+    except Exception as e:
+        return f"Error creating file '{filename}': {str(e)}"
+
+
+def remove_file(filename):
+    try:
+        os.remove(f"{directory}{filename}")
+        return f"File '{filename}' removed successfully."
+    except Exception as e:
+        return f"Error removing file '{filename}': {str(e)}"
+
+
+def execute_file(filename):
+    try:
+        output = os.popen(f"cd Files && chmod +x {filename} && ./{filename}").read()
+        return f"Execution of '{filename}' successful. Output: {output}"
+    except Exception as e:
+        return f"Execution failed for '{filename}': {str(e)}"
+
+
+def read_file(filename):
+    try:
+        with open(f"{directory}{filename}", 'r') as file:
+            file_contents = file.read()
+            return f"Contents of '{filename}':\n{file_contents}"
+    except FileNotFoundError:
+        return f"File '{filename}' not found."
+    except Exception as e:
+        return f"Error reading file '{filename}': {str(e)}"
+
+
+def edit_file(filename, text):
+    try:
+        if admin:
+            with open(f"{directory}{filename}", 'a') as file:
+                file.write(f"\n{text}")
+            return f"Text added to '{filename}' successfully."
+        else:
+            return "Only admin can edit files."
+    except Exception as e:
+        return f"Error editing file '{filename}': {str(e)}"
+
+
+def clear_file(filename):
+    try:
+        if admin:
+            with open(f"{directory}{filename}", 'w') as file:
+                file.write('')
+            return f"Content of '{filename}' cleared successfully."
+        else:
+            return "Only admin can clear files."
+    except Exception as e:
+        return f"Error erasing file '{filename}': {str(e)}"
+
+
+def list_files():
+    try:
+        files = os.listdir(directory)
+        files_list = "\n".join(files)
+        return f"Files in directory:\n{files_list}"
+    except Exception as e:
+        return f"Error listing files: {str(e)}"
+
+
+def make_directory(dirname):
+    try:
+        if admin:
+            os.mkdir(f"{directory}{dirname}")
+            return f"Directory '{dirname}' created successfully."
+        else:
+            return "Only admin can create directories."
+    except Exception as e:
+        return f"Error creating directory '{dirname}': {str(e)}"
+
+
+def change_directory(dirname):
+    try:
+        global directory
+        if dirname == '..':
+            if directory != 'Files/':
+                directory = '/'.join(directory.split('/')[:-2]) + '/'
+        else:
+            if os.path.isdir(f"{directory}{dirname}"):
+                directory = f"{directory}{dirname}/"
+        return f"Current directory: {directory}"
+    except Exception as e:
+        return f"Error changing directory: {str(e)}"
+
+
 serverSocket = socket(AF_INET, SOCK_DGRAM)
-serverName = "localhost"  # Replace with your server's hostname or IP address
-serverPort = 4444
+serverPort = 4445
 BUFFER_SIZE = 2048
-FILES_DIRECTORY = "Files/"
-
-serverSocket.bind((serverName, serverPort))
-print("Server is ready to accept requests from clients.")
-
-clients = {}
+clients = []
 admin = None
+
+serverSocket.bind(("", serverPort))
+print("Server is ready to accept requests from clients.")
 
 while True:
     message, clientAddress = serverSocket.recvfrom(BUFFER_SIZE)
     decoded_message = message.decode()
+    command_parts = decoded_message.split()
 
     if clientAddress not in clients:
-        clients[clientAddress] = decoded_message
+        clients.append(clientAddress)
         print(clients)
         if admin is None:
             admin = clientAddress
             print(f"{clientAddress} is now the admin.")
-    else:
-        if decoded_message.startswith('/command '):
-            command = decoded_message.split('/command ')[1]
 
-            if clientAddress == admin:
-                # Admin can run any command
-                os.chdir(FILES_DIRECTORY)
-                output = os.popen(command).read()
-                serverSocket.sendto(output.encode(), clientAddress)
-                print(f"Admin {clientAddress[0]} executed command: {command}")
+    if clientAddress == admin:
+        if command_parts[0] == "add":
+            if len(command_parts) < 2:
+                response = "Usage: add <filename>"
             else:
-                # Others have read permissions only
-                if command.strip() == 'ls':
-                    os.chdir(FILES_DIRECTORY)
-                    output = os.popen('ls').read()
-                    serverSocket.sendto(output.encode(), clientAddress)
-                    print(f"User {clientAddress[0]} listed files.")
-                else:
-                    serverSocket.sendto("Permission denied.".encode(), clientAddress)
-                    print(f"User {clientAddress[0]} attempted an unauthorized command.")
+                response = add_file(command_parts[1])
+        elif command_parts[0] == "remove":
+            if len(command_parts) < 2:
+                response = "Usage: remove <filename>"
+            else:
+                response = remove_file(command_parts[1])
+        elif command_parts[0] == "execute":
+            if len(command_parts) < 2:
+                response = "Usage: execute <filename>"
+            else:
+                response = execute_file(command_parts[1])
+        elif command_parts[0] == "edit":
+            if len(command_parts) < 3:
+                response = "Usage: edit <filename> <text>"
+            else:
+                filename = command_parts[1]
+                text = ' '.join(command_parts[2:])
+                response = edit_file(filename, text)
+        elif command_parts[0] == "clear":
+            if len(command_parts) < 2:
+                response = "Usage: clear <filename>"
+            else:
+                response = clear_file(command_parts[1])
+        elif command_parts[0] == "ls":
+            response = list_files()
+        elif command_parts[0] == "read":
+            if len(command_parts) < 2:
+                response = "Usage: read <filename>"
+            else:
+                response = read_file(command_parts[1])
+        elif command_parts[0] == "mkdir":
+            if len(command_parts) < 2:
+                response = "Usage: mkdir <dirname>"
+            else:
+                response = make_directory(command_parts[1])
+        elif command_parts[0] == "cd":
+            if len(command_parts) < 2:
+                response = "Usage: cd <dirname or '..'>"
+            else:
+                response = change_directory(command_parts[1])
         else:
-            for address, name in clients.items():
-                modified_message = f"{clientAddress[0]}: {decoded_message}"
-                serverSocket.sendto(modified_message.encode(), address)
-                print(f"{clientAddress[0]}: {decoded_message}")
+            response = "Invalid command."
+    else:
+        if command_parts[0] == "read":
+            if len(command_parts) < 2:
+                response = "Usage: read <filename>"
+            else:
+                response = read_file(command_parts[1])
+        elif command_parts[0] == "ls":
+            response = list_files()
+        elif command_parts[0] == "cd":
+            if len(command_parts) < 2:
+                response = "Usage: cd <dirname or '..'>"
+            else:
+                response = change_directory(command_parts[1])
+        elif command_parts[0] == "add" or command_parts[0] == "remove" or command_parts[0] == "execute" or command_parts[0] == "edit" or command_parts[0] == "clear":
+            response = "You are not authorized to perform this action."
+        else:
+            response = "Invalid command."
 
-serverSocket.close()
+    serverSocket.sendto(response.encode(), clientAddress)
