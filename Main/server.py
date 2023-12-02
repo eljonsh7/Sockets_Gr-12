@@ -1,77 +1,79 @@
 from socket import *
 import os
 import subprocess
+import shutil
 
 directory = 'Files/'
 
-def add_file(filename):
+
+def add_file(file):
     try:
-        with open(f"{directory}{filename}", 'w') as new_file:
+        with open(f"{directory}{file}", 'w') as new_file:
             new_file.write('')
-        return f"File '{filename}' created successfully."
+        return f"File '{file}' created successfully."
     except Exception as e:
-        return f"Error creating file '{filename}': {str(e)}"
+        return f"Error creating file '{file}': {str(e)}"
 
 
-def remove_file(filename):
+def remove_file(file):
     try:
-        os.remove(f"{directory}{filename}")
-        return f"File '{filename}' removed successfully."
+        os.remove(f"{directory}{file}")
+        return f"File '{file}' removed successfully."
     except Exception as e:
-        return f"Error removing file '{filename}': {str(e)}"
+        return f"Error removing file '{file}': {str(e)}"
 
 
-def execute_file(filename):
+def execute_file(file):
     try:
-        full_path = f"{directory}{filename}"
-        if filename.endswith('.py'):  # Checking if the file is a Python script
+        full_path = f"{directory}{file}"
+        if file.endswith('.py'):  # Checking if the file is a Python script
             result = subprocess.run(['python', full_path], capture_output=True, text=True, check=True)
-        elif filename.endswith('.js'):  # Checking if the file is a Python script
+        elif file.endswith('.js'):  # Checking if the file is a Python script
             result = subprocess.run(['node', full_path], capture_output=True, text=True, check=True)
         else:
             result = subprocess.run([full_path], capture_output=True, text=True, check=True)
 
         output = result.stdout
         if result.returncode != 0:
-            return f"Execution failed for '{filename}'. Error: {result.stderr}"
-        return f"Execution of '{filename}' successful. Output: {output}"
+            return f"Execution failed for '{file}'. Error: {result.stderr}"
+        return f"Execution of '{file}' successful. Output: {output}"
     except Exception as e:
-        return f"Execution failed for '{filename}': {str(e)}"
+        return f"Execution failed for '{file}': {str(e)}"
 
 
-def read_file(filename):
+def read_file(file):
     try:
-        with open(f"{directory}{filename}", 'r') as file:
+        with open(f"{directory}{file}", 'r') as file:
             file_contents = file.read()
-            return f"Contents of '{filename}':\n{file_contents}"
+            return f"Contents of '{file}':\n{file_contents}"
     except FileNotFoundError:
-        return f"File '{filename}' not found."
+        return f"File '{file}' not found."
     except Exception as e:
-        return f"Error reading file '{filename}': {str(e)}"
+        return f"Error reading file '{file}': {str(e)}"
 
 
-def edit_file(filename, text):
+def edit_file(file, txt):
     try:
         if admin:
-            with open(f"{directory}{filename}", 'a') as file:
-                file.write(f"\n{text}")
-            return f"Text added to '{filename}' successfully."
+            with open(f"{directory}{file}", 'a') as file:
+                file.write(f"\n{txt}")
+            return f"Text added to '{file}' successfully."
         else:
             return "Only admin can edit files."
     except Exception as e:
-        return f"Error editing file '{filename}': {str(e)}"
+        return f"Error editing file '{file}': {str(e)}"
 
 
-def clear_file(filename):
+def clear_file(file):
     try:
         if admin:
-            with open(f"{directory}{filename}", 'w') as file:
+            with open(f"{directory}{file}", 'w') as file:
                 file.write('')
-            return f"Content of '{filename}' cleared successfully."
+            return f"Content of '{file}' cleared successfully."
         else:
             return "Only admin can clear files."
     except Exception as e:
-        return f"Error erasing file '{filename}': {str(e)}"
+        return f"Error erasing file '{file}': {str(e)}"
 
 
 def list_files():
@@ -106,6 +108,14 @@ def change_directory(dirname):
         return f"Current directory: {directory}"
     except Exception as e:
         return f"Error changing directory: {str(e)}"
+
+
+def delete_directory(dirname):
+    try:
+        shutil.rmtree(f"{directory}{dirname}")
+        return f"Folder '{dirname}' deleted successfully."
+    except Exception as e:
+        return f"Error deleting folder '{dirname}': {str(e)}"
 
 
 serverSocket = socket(AF_INET, SOCK_DGRAM)
@@ -169,6 +179,11 @@ while True:
                 response = "Usage: mkdir <dirname>"
             else:
                 response = make_directory(command_parts[1])
+        elif command_parts[0] == "rmdir":
+            if len(command_parts) < 2:
+                response = "Usage: rmdir <dirname>"
+            else:
+                response = delete_directory(command_parts[1])
         elif command_parts[0] == "cd":
             if len(command_parts) < 2:
                 response = "Usage: cd <dirname or '..'>"
@@ -189,7 +204,9 @@ while True:
                 response = "Usage: cd <dirname or '..'>"
             else:
                 response = change_directory(command_parts[1])
-        elif command_parts[0] == "add" or command_parts[0] == "remove" or command_parts[0] == "execute" or command_parts[0] == "edit" or command_parts[0] == "clear":
+        elif (command_parts[0] == "add" or command_parts[0] == "remove" or command_parts[0] == "execute" or
+              command_parts[0] == "edit" or command_parts[0] == "clear" or command_parts[0] == "mkdir" or
+              command_parts[0] == "rmdir"):
             response = "You are not authorized to perform this action."
         else:
             response = "Invalid command."

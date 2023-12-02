@@ -1,11 +1,12 @@
 from socket import *
-import  threading
-def receive_messages(socket):
+import threading
+
+
+def receive_messages(client_socket):
     while True:
-        modifiedMessage = socket.recv(BUFFER_SIZE)
-        print(modifiedMessage.decode())
-        # if modifiedMessage.decode().lower() == 'exit':
-        #     break
+        modified_message = client_socket.recv(BUFFER_SIZE)
+        print(modified_message.decode())
+
 
 clientSocket = socket(AF_INET, SOCK_DGRAM)
 serverName = "127.0.0.1"
@@ -19,6 +20,8 @@ receive_thread.start()
 
 while True:
     message = input()
+    if message.lower() == 'exit':
+        break
     clientSocket.send(message.encode())
 
 clientSocket.close()
