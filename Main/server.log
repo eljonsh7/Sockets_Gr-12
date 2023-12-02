@@ -1,6 +1,0 @@
-2023-11-25 13:37:48,243:[FILE DIRECTORY]          ./host_dir directory created. Keep files which you want clients to download here.
-2023-11-25 13:37:48,243:[STARTING]                Server is starting...
-2023-11-25 13:37:48,244:[LISTENING]               Server is listening on host:192.168.0.35 and Port:9000
-2023-11-25 13:38:06,791:[NEW CONNECTION]          ('192.168.0.35', 50037) connected.
-2023-11-25 13:38:06,792:[FETCH FILE LIST]         ('192.168.0.35', 50037)
-2023-11-25 13:38:06,792:[ACTIVE CONNECTIONS]      1

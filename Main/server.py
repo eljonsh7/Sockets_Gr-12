@@ -1,5 +1,6 @@
 from socket import *
 import os
+import subprocess
 
 directory = 'Files/'
 
@@ -22,7 +23,17 @@ def remove_file(filename):
 
 def execute_file(filename):
     try:
-        output = os.popen(f"cd Files && chmod +x {filename} && ./{filename}").read()
+        full_path = f"{directory}{filename}"
+        if filename.endswith('.py'):  # Checking if the file is a Python script
+            result = subprocess.run(['python', full_path], capture_output=True, text=True, check=True)
+        elif filename.endswith('.js'):  # Checking if the file is a Python script
+            result = subprocess.run(['node', full_path], capture_output=True, text=True, check=True)
+        else:
+            result = subprocess.run([full_path], capture_output=True, text=True, check=True)
+
+        output = result.stdout
+        if result.returncode != 0:
+            return f"Execution failed for '{filename}'. Error: {result.stderr}"
         return f"Execution of '{filename}' successful. Output: {output}"
     except Exception as e:
         return f"Execution failed for '{filename}': {str(e)}"
