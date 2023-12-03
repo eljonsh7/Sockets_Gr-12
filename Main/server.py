@@ -119,12 +119,13 @@ def delete_directory(dirname):
 
 
 serverSocket = socket(AF_INET, SOCK_DGRAM)
+serverName = '192.168.0.35'
 serverPort = 4445
 BUFFER_SIZE = 2048
 clients = []
 admin = None
 
-serverSocket.bind(("", serverPort))
+serverSocket.bind((serverName, serverPort))
 print("Server is ready to accept requests from clients.")
 
 while True:
