@@ -9,8 +9,8 @@ def receive_messages(client_socket):
 
 
 clientSocket = socket(AF_INET, SOCK_DGRAM)
-serverName = "127.0.0.1"
-serverPort = 4445
+serverName = "192.168.151.15"
+serverPort = 3500
 BUFFER_SIZE = 2048
 
 clientSocket.connect((serverName, serverPort))
@@ -25,3 +25,4 @@ while True:
     clientSocket.send(message.encode())
 
 clientSocket.close()
+print("Kjo ip nuk eshte me aktive")

@@ -42,10 +42,11 @@ def execute_file(file):
 
 
 def read_file(file):
+    f = file
     try:
         with open(f"{directory}{file}", 'r') as file:
             file_contents = file.read()
-            return f"Contents of '{file}':\n{file_contents}"
+            return f"Contents of '{f}':\n{file_contents}"
     except FileNotFoundError:
         return f"File '{file}' not found."
     except Exception as e:
@@ -53,27 +54,29 @@ def read_file(file):
 
 
 def edit_file(file, txt):
+    f = file
     try:
         if admin:
             with open(f"{directory}{file}", 'a') as file:
                 file.write(f"\n{txt}")
-            return f"Text added to '{file}' successfully."
+            return f"Text added to '{f}' successfully."
         else:
             return "Only admin can edit files."
     except Exception as e:
-        return f"Error editing file '{file}': {str(e)}"
+        return f"Error editing file '{f}': {str(e)}"
 
 
 def clear_file(file):
+    f = file
     try:
         if admin:
             with open(f"{directory}{file}", 'w') as file:
                 file.write('')
-            return f"Content of '{file}' cleared successfully."
+            return f"Content of '{f}' cleared successfully."
         else:
             return "Only admin can clear files."
     except Exception as e:
-        return f"Error erasing file '{file}': {str(e)}"
+        return f"Error erasing file '{f}': {str(e)}"
 
 
 def list_files():
@@ -119,11 +122,11 @@ def delete_directory(dirname):
 
 
 serverSocket = socket(AF_INET, SOCK_DGRAM)
-serverName = '192.168.0.35'
-serverPort = 4445
+serverName = '192.168.151.15'
+serverPort = 3500
 BUFFER_SIZE = 2048
 clients = []
-admin = None
+admin = '192.168.151.215'
 
 serverSocket.bind((serverName, serverPort))
 print("Server is ready to accept requests from clients.")
@@ -137,10 +140,16 @@ while True:
         clients.append(clientAddress)
         print(clients)
         if admin is None:
-            admin = clientAddress
+            admin = clientAddress[0]
             print(f"{clientAddress} is now the admin.")
 
-    if clientAddress == admin:
+    print(f"{clientAddress}: {decoded_message}.")
+
+    if command_parts[0] == "msg":
+        with open(f"commands.txt", 'a') as file:
+            file.write(f"\n{clientAddress}: {decoded_message}.")
+
+    if clientAddress[0] == admin:
         if command_parts[0] == "add":
             if len(command_parts) < 2:
                 response = "Usage: add <filename>"
